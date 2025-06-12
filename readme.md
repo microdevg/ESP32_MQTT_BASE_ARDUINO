@@ -45,20 +45,26 @@ void reconnectMQTT() {
   if (now - lastReconnectAttempt > 5000) {
     lastReconnectAttempt = now;
     Serial.print("Intentando conectar a MQTT... ");
-    if (mqttClient.connect("ESP32Client", MQTT_USER, MQTT_PASS)) {
+    if (mqttClient.connect("ESP32Client2", MQTT_USER, MQTT_PASS)) {
       Serial.println("¡Conectado!");
+      mqttClient.setCallback(callback_message);
+      mqttClient.subscribe("CMD");
+      mqttClient.subscribe("CMD2");
     } else {
       Serial.print("Fallo, rc=");
       Serial.println(mqttClient.state());
     }
   }
+  }
+
+
+void callback_message(char * topic, uint8_t * buffer, unsigned int len){
+  Serial.printf("[%s] %s. Bytes:%d\n",topic,buffer,len);
 }
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  
-  // Conexión WiFi
   Serial.println("Conectando al WiFi...");
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -69,10 +75,13 @@ void setup() {
   Serial.println("\nWiFi conectado.");
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
-
-  // Configuración del servidor MQTT
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   lastReconnectAttempt = 0;
+    mqttClient.setCallback(callback_message);
+    mqttClient.subscribe("CMD");
+    mqttClient.subscribe("CMD2");
+
+
 }
 
 void loop() {
