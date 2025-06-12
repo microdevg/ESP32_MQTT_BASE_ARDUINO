@@ -26,18 +26,27 @@ unsigned long lastMsg = 0;
 const long interval = 1000; // 1 segundo para enviar mensajes
 unsigned long lastReconnectAttempt = 0;
 
+// Reconexión no bloqueante a MQTT
 void reconnectMQTT() {
   unsigned long now = millis();
   if (now - lastReconnectAttempt > 5000) {
     lastReconnectAttempt = now;
     Serial.print("Intentando conectar a MQTT... ");
-    if (mqttClient.connect("ESP32Client", MQTT_USER, MQTT_PASS)) {
+    if (mqttClient.connect("ESP32Client2", MQTT_USER, MQTT_PASS)) {
       Serial.println("¡Conectado!");
+      mqttClient.setCallback(callback_message);
+      mqttClient.subscribe("CMD");
+      mqttClient.subscribe("CMD2");
     } else {
       Serial.print("Fallo, rc=");
       Serial.println(mqttClient.state());
     }
   }
+  }
+
+
+void callback_message(char * topic, uint8_t * buffer, unsigned int len){
+  Serial.printf("[%s] %s. Bytes:%d\n",topic,buffer,len);
 }
 
 void setup() {
@@ -53,28 +62,31 @@ void setup() {
   Serial.println("\nWiFi conectado.");
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
-
-  // Configuración del servidor MQTT
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   lastReconnectAttempt = 0;
+    mqttClient.setCallback(callback_message);
+    mqttClient.subscribe("CMD");
+    mqttClient.subscribe("CMD2");
+
+
 }
 
 void loop() {
   // Reintento de conexión si no está conectado
   if (!mqttClient.connected()) {
     reconnectMQTT();
-    return;
+    return; // Esperar a conectar antes de continuar
   }
 
-  mqttClient.loop(); 
+  mqttClient.loop(); // Mantiene viva la conexión MQTT
 
   unsigned long now = millis();
   if (now - lastMsg > interval) {
     lastMsg = now;
     sprintf(buffer, "counter:%d", counter++);
+    
     bool success = mqttClient.publish("IFTS24", buffer);
     Serial.print(buffer);
     Serial.println(success ? " -> OK" : " -> ERROR");
   }
 }
-
